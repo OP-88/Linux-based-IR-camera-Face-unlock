@@ -394,7 +394,7 @@ def run_gui():
             elif base == "install-pam": self.run_install()
             elif base == "uninstall-pam": self.run_uninstall()
             else:
-                self.terminal.append(f"🔒 Access Denied: '{raw_text}' is not a recognized Infra Lock command. This terminal is securely isolated. Type 'help'.")
+                self.terminal.append(f"[ACCESS DENIED]: '{raw_text}' is not a recognized Infra Lock command. This terminal is securely isolated. Type 'help'.")
 
 
     app = QApplication(sys.argv)
