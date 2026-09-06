@@ -19,12 +19,20 @@ echo "Downloading AI Models to global storage..."
 curl -sL -o /usr/share/facelock/models/yunet.onnx "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
 curl -sL -o /usr/share/facelock/models/sface.onnx "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
 
+echo "Setting up secure Python Virtual Environment..."
+python3 -m venv /opt/facelock/venv
+/opt/facelock/venv/bin/pip install opencv-python-headless numpy cryptography
+
 echo "Copying CLI tool..."
 cp src/facelock.py /opt/facelock/facelock.py
 chmod +x /opt/facelock/facelock.py
 
-# Create a symlink so it's in the system path
-ln -sf /opt/facelock/facelock.py /usr/local/bin/facelock
+echo "Creating executable wrapper..."
+cat << 'EOF' > /usr/local/bin/facelock
+#!/bin/bash
+exec /opt/facelock/venv/bin/python /opt/facelock/facelock.py "$@"
+EOF
+chmod +x /usr/local/bin/facelock
 
 echo "Setting up default configuration..."
 if [ ! -f /etc/facelock/config.ini ]; then
