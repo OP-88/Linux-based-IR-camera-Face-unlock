@@ -382,8 +382,14 @@ def run_gui():
             self.terminal.append("\n" + "-"*40)
             self.terminal.append(f"> {'pkexec ' if use_pkexec else ''}infralock {' '.join(cmd_args)}")
             
-            program = "pkexec" if use_pkexec else "/usr/local/bin/infralock"
-            args = ["/usr/local/bin/infralock"] + cmd_args if use_pkexec else cmd_args
+            current_user = os.environ.get("USER", "root")
+            
+            if use_pkexec:
+                program = "pkexec"
+                args = ["/usr/bin/env", f"PAM_USER={current_user}", "/usr/local/bin/infralock"] + cmd_args
+            else:
+                program = "/usr/local/bin/infralock"
+                args = cmd_args
             
             self.process.start(program, args)
 
