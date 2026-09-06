@@ -186,7 +186,7 @@ def authenticate(username, config, is_pam=False):
     shutter_delay = config.getfloat('camera', 'shutter_delay', fallback=2.0)
     
     if shutter_delay > 0:
-        if not is_pam: print(f"\n⏳ Please open your camera shutter... (Waiting {shutter_delay}s)")
+        if not is_pam: print(f"\nPlease open your camera shutter... (Waiting {shutter_delay}s)")
         time.sleep(shutter_delay)
     
     cap = open_camera(dev_path)
@@ -303,45 +303,20 @@ def run_gui():
             
             layout = QVBoxLayout()
             
-            # Logo
-            self.logo_label = QLabel(self)
-            logo_path = os.path.join(os.path.dirname(__file__), 'logo.jpg')
-            if getattr(sys, 'frozen', False):
-                logo_path = os.path.join(sys._MEIPASS, 'logo.jpg')
-            elif not os.path.exists(logo_path):
-                # Fallback if run from source dir
-                logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logo.jpg')
-            
-            if os.path.exists(logo_path):
-                pixmap = QPixmap(logo_path).scaled(150, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                self.logo_label.setPixmap(pixmap)
-            self.logo_label.setAlignment(Qt.AlignCenter)
-            layout.addWidget(self.logo_label)
-            
-            title = QLabel("INFRA LOCK")
-            title.setFont(QFont("Arial", 24, QFont.Bold))
-            title.setAlignment(Qt.AlignCenter)
-            layout.addWidget(title)
-            
-            subtitle = QLabel("Zero-Knowledge Biometric Engine")
-            subtitle.setStyleSheet("color: #aaaaaa;")
-            subtitle.setAlignment(Qt.AlignCenter)
-            layout.addWidget(subtitle)
-            
             layout.addSpacing(20)
             
-            self.btn_enroll = self.create_button("📸 Create / Reset Face Profile", "#2e7d32", self.run_enroll)
+            self.btn_enroll = self.create_button("Create / Reset Face Profile", "#2e7d32", self.run_enroll)
             layout.addWidget(self.btn_enroll)
             
-            self.btn_test = self.create_button("✅ Test Authentication", "#2c2c2c", self.run_test)
+            self.btn_test = self.create_button("Test Authentication", "#2c2c2c", self.run_test)
             layout.addWidget(self.btn_test)
             
             layout.addSpacing(10)
             
-            self.btn_install = self.create_button("⚙️ Enable System-Wide Auth", "#2c2c2c", self.run_install)
+            self.btn_install = self.create_button("Enable System-Wide Auth", "#2c2c2c", self.run_install)
             layout.addWidget(self.btn_install)
             
-            self.btn_uninstall = self.create_button("❌ Disable System-Wide Auth", "#c62828", self.run_uninstall)
+            self.btn_uninstall = self.create_button("Disable System-Wide Auth", "#c62828", self.run_uninstall)
             layout.addWidget(self.btn_uninstall)
             
             layout.addSpacing(20)
