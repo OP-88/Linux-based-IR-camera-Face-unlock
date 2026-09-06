@@ -69,9 +69,20 @@ def scan_face(cap, detector, timeout=5.0):
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
             
         h, w, _ = frame.shape
-        detector.setInputSize((w, h))
         
-        ret, faces = detector.detect(frame)
+        # YuNet crashes if dimensions aren't multiples of 32 (tensor mismatch)
+        new_h = int(np.ceil(h / 32.0) * 32)
+        new_w = int(np.ceil(w / 32.0) * 32)
+        
+        if new_h != h or new_w != w:
+            pad_frame = np.zeros((new_h, new_w, 3), dtype=np.uint8)
+            pad_frame[:h, :w, :] = frame
+            detector.setInputSize((new_w, new_h))
+            ret, faces = detector.detect(pad_frame)
+        else:
+            detector.setInputSize((w, h))
+            ret, faces = detector.detect(frame)
+            
         if faces is not None and len(faces) > 0:
             return frame, faces[0]
             
