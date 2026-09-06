@@ -12,8 +12,8 @@ mkdir -p /var/lib/facelock
 mkdir -p /usr/share/facelock/models
 mkdir -p /opt/facelock
 
-# Secure the vault directory
-chmod 700 /var/lib/facelock
+# Secure the vault directory but allow users to read their own vaults
+chmod 755 /var/lib/facelock
 
 echo "Downloading AI Models to global storage..."
 curl -sL -o /usr/share/facelock/models/yunet.onnx "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"

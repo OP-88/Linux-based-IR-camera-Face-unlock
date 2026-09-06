@@ -138,6 +138,10 @@ def enroll(username, config):
     
     with open(vault_path, "wb") as f:
         f.write(encrypted_blob)
+    
+    import pwd
+    user_info = pwd.getpwnam(username)
+    os.chown(vault_path, user_info.pw_uid, user_info.pw_gid)
     os.chmod(vault_path, 0o600)
 
     print(f"\nENROLLMENT SUCCESSFUL for {username}!")
@@ -220,7 +224,7 @@ def main():
 
     target_user = os.environ.get("PAM_USER", os.environ.get("SUDO_USER", os.environ.get("USER")))
 
-    if os.geteuid() != 0 and args.command in ["enroll", "auth-pam", "config", "test"]:
+    if os.geteuid() != 0 and args.command in ["enroll", "config"]:
         print("Error: This command must be run as root (sudo facelock ...)")
         sys.exit(1)
 
