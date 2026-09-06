@@ -448,11 +448,12 @@ def main():
         print("Error: This command must be run as root (sudo infralock ...)")
         sys.exit(1)
 
-    # Initialize config file gracefully if missing
-    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
-    if not os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'w') as f:
-            f.write("[camera]\ndevice_path = /dev/video2\ntimeout = 5.0\n[security]\nthreshold = 0.363\n")
+    # Initialize config file gracefully if missing (Root only)
+    if os.geteuid() == 0:
+        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+        if not os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, 'w') as f:
+                f.write("[camera]\ndevice_path = /dev/video2\ntimeout = 5.0\n[security]\nthreshold = 0.363\n")
 
     config = load_config()
 
