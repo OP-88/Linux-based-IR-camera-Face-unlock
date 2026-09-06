@@ -11,17 +11,17 @@ source venv/bin/activate
 echo "Installing build dependencies..."
 pip install pyinstaller opencv-python-headless numpy cryptography
 
-echo "Compiling FaceLock into a standalone binary..."
-pyinstaller --onefile --name facelock \
+echo "Compiling Infra Lock into a standalone binary..."
+pyinstaller --onefile --name infralock \
     --add-data "models/yunet.onnx:models" \
     --add-data "models/sface.onnx:models" \
     --hidden-import="cv2" \
     --hidden-import="numpy" \
     --hidden-import="cryptography" \
-    src/facelock.py
+    src/infralock.py
 
 echo "Build complete! Your standalone air-gapped binary is located at:"
-echo "dist/facelock"
+echo "dist/infralock"
 
 echo "To install system-wide, simply move it:"
-echo "sudo cp dist/facelock /usr/local/bin/facelock"
+echo "sudo cp dist/infralock /usr/local/bin/infralock"

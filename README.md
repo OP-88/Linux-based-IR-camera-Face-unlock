@@ -1,4 +1,7 @@
-# Linux IR Camera Face Unlock
+<div align="center">
+  <img src="logo.jpg" alt="Infra Lock Logo" width="300"/>
+  <h1>Infra Lock</h1>
+</div>
 
 A highly secure, zero-knowledge biometric authentication engine for Linux, utilizing Infrared (IR) cameras. 
 
@@ -23,21 +26,21 @@ chmod +x build.sh
 
 2. Move the compiled binary into your system path:
 ```bash
-sudo cp dist/facelock /usr/local/bin/facelock
+sudo cp dist/infralock /usr/local/bin/infralock
 ```
 
 ## Usage (GUI)
 
 The application now ships with a fully graphical interface! Just run:
 ```bash
-facelock gui
+infralock gui
 ```
 From here you can enroll your face, test the camera, and enable or disable the system-wide lock integration with a single click.
 
 ## Usage (CLI)
 
 If you prefer the terminal:
-- Enroll your face: `sudo facelock enroll`
-- Test your camera: `sudo facelock test`
-- Inject into Linux login/sudo screens: `sudo facelock install-pam`
-- Remove from Linux login/sudo screens: `sudo facelock uninstall-pam`
+- Enroll your face: `sudo infralock enroll`
+- Test your camera: `sudo infralock test`
+- Inject into Linux login/sudo screens: `sudo infralock install-pam`
+- Remove from Linux login/sudo screens: `sudo infralock uninstall-pam`
