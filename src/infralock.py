@@ -279,6 +279,14 @@ def manage_pam(action="install"):
     print("PAM configuration updated successfully!")
 
 def run_gui():
+    import fcntl
+    try:
+        lock_file = open('/tmp/infralock.lock', 'w')
+        fcntl.lockf(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except IOError:
+        print("Infra Lock Control Panel is already running.")
+        sys.exit(0)
+
     try:
         from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLineEdit
         from PyQt5.QtGui import QIcon
@@ -322,11 +330,10 @@ def run_gui():
             
             layout.addSpacing(10)
             
-            self.btn_install = self.create_button("Enable System-Wide Auth", "#2c2c2c", self.run_install)
-            layout.addWidget(self.btn_install)
-            
-            self.btn_uninstall = self.create_button("Disable System-Wide Auth", "#c62828", self.run_uninstall)
-            layout.addWidget(self.btn_uninstall)
+            self.is_pam_enabled = self.check_pam_status()
+            self.btn_toggle_pam = self.create_button("", "", self.run_toggle_pam)
+            self.update_pam_button()
+            layout.addWidget(self.btn_toggle_pam)
             
             layout.addSpacing(20)
             
@@ -343,6 +350,21 @@ def run_gui():
             
             self.setLayout(layout)
 
+        def check_pam_status(self):
+            try:
+                with open('/etc/pam.d/sudo', 'r') as f:
+                    return 'infralock auth-pam' in f.read()
+            except Exception:
+                return False
+
+        def update_pam_button(self):
+            if self.is_pam_enabled:
+                self.btn_toggle_pam.setText("Disable System-Wide Auth")
+                self.btn_toggle_pam.setStyleSheet("QPushButton { background-color: #c62828; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: bold; border: 1px solid #444; } QPushButton:hover { background-color: #d32f2f; }")
+            else:
+                self.btn_toggle_pam.setText("Enable System-Wide Auth")
+                self.btn_toggle_pam.setStyleSheet("QPushButton { background-color: #2c2c2c; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: bold; border: 1px solid #444; } QPushButton:hover { background-color: #3c3c3c; }")
+
         def create_button(self, text, color, callback):
             btn = QPushButton(text)
             btn.setStyleSheet(f"QPushButton {{ background-color: {color}; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: bold; border: 1px solid #444; }} QPushButton:hover {{ background-color: #3c3c3c; }}")
@@ -352,8 +374,7 @@ def run_gui():
         def set_buttons_enabled(self, enabled):
             self.btn_enroll.setEnabled(enabled)
             self.btn_test.setEnabled(enabled)
-            self.btn_install.setEnabled(enabled)
-            self.btn_uninstall.setEnabled(enabled)
+            self.btn_toggle_pam.setEnabled(enabled)
             self.terminal_input.setEnabled(enabled)
 
         def execute_cmd(self, cmd_args, use_pkexec=False):
@@ -368,8 +389,11 @@ def run_gui():
 
         def run_enroll(self): self.execute_cmd(["enroll"], True)
         def run_test(self): self.execute_cmd(["test"], False)
-        def run_install(self): self.execute_cmd(["install-pam"], True)
-        def run_uninstall(self): self.execute_cmd(["uninstall-pam"], True)
+        def run_toggle_pam(self):
+            if self.is_pam_enabled:
+                self.execute_cmd(["uninstall-pam"], True)
+            else:
+                self.execute_cmd(["install-pam"], True)
 
         def handle_stdout(self):
             data = self.process.readAllStandardOutput().data().decode()
@@ -381,6 +405,8 @@ def run_gui():
             
         def process_finished(self):
             self.terminal.append("\n[Process Finished]")
+            self.is_pam_enabled = self.check_pam_status()
+            self.update_pam_button()
             self.set_buttons_enabled(True)
             self.terminal_input.setEnabled(True)
 
@@ -400,8 +426,8 @@ def run_gui():
             elif base == "enroll": self.run_enroll()
             elif base == "test": self.run_test()
             elif base == "config": self.execute_cmd(["config"], True)
-            elif base == "install-pam": self.run_install()
-            elif base == "uninstall-pam": self.run_uninstall()
+            elif base == "install-pam": self.execute_cmd(["install-pam"], True)
+            elif base == "uninstall-pam": self.execute_cmd(["uninstall-pam"], True)
             else:
                 self.terminal.append(f"[ACCESS DENIED]: '{raw_text}' is not a recognized Infra Lock command. This terminal is securely isolated. Type 'help'.")
 
