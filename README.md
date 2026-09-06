@@ -10,23 +10,23 @@ Finally, the data is encrypted via AES-256 using a hardware-bound key generated 
 
 ## Setup
 
-1. Create a virtual environment and install dependencies:
+1. Run the installer to create the virtual environment and system endpoints:
 ```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+sudo ./install.sh
 ```
 
-2. Enroll your face:
+2. Enroll your face (will use `/dev/video2` by default):
 ```bash
-python src/enroll.py
+sudo facelock enroll
 ```
-*(Looks for a camera at `/dev/video2`. The script will download the required ONNX AI models on first run).*
 
-3. Test Authentication:
+3. Test Authentication (Dry-run without locking your system):
 ```bash
-python src/auth.py
+sudo facelock test
 ```
 
 ## PAM Integration
-*Coming soon: Instructions for wrapping this into a PAM module for `sudo` and lockscreen auth.*
+To use this to bypass passwords for `sudo`, add the following line to the top of `/etc/pam.d/sudo`:
+```text
+auth sufficient pam_exec.so stdout seteuid /usr/local/bin/facelock auth-pam
+```
