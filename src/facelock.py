@@ -220,7 +220,7 @@ def main():
 
     target_user = os.environ.get("PAM_USER", os.environ.get("SUDO_USER", os.environ.get("USER")))
 
-    if os.geteuid() != 0 and args.command in ["enroll", "auth-pam", "config"]:
+    if os.geteuid() != 0 and args.command in ["enroll", "auth-pam", "config", "test"]:
         print("Error: This command must be run as root (sudo facelock ...)")
         sys.exit(1)
 
