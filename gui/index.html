@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Infra Lock</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0d0d0d;
+            color: #ffffff;
+            margin: 0;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header img {
+            width: 120px;
+            border-radius: 10px;
+        }
+        h1 { margin: 15px 0 5px 0; font-size: 2.2em; font-weight: 600; letter-spacing: 1px; }
+        p { color: #888888; margin: 0; font-size: 1.1em; }
+        
+        .card {
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            padding: 25px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+        
+        button {
+            background-color: #2c2c2c;
+            color: white;
+            border: 1px solid #444;
+            padding: 14px 20px;
+            margin: 8px 0;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        button:hover { background-color: #3c3c3c; border-color: #666; transform: translateY(-1px); }
+        button:active { transform: translateY(1px); }
+        button.primary { background-color: #2e7d32; border-color: #2e7d32; }
+        button.primary:hover { background-color: #388e3c; }
+        button.danger { background-color: #c62828; border-color: #c62828; }
+        button.danger:hover { background-color: #d32f2f; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        #terminal {
+            background-color: #000;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 15px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 450px;
+            height: 180px;
+            overflow-y: auto;
+            box-sizing: border-box;
+            white-space: pre-wrap;
+            border: 1px solid #333;
+            margin-top: 10px;
+            display: none;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="../logo.jpg" alt="Infra Lock" onerror="this.style.display='none'">
+        <h1>INFRA LOCK</h1>
+        <p>Zero-Knowledge Biometric Engine</p>
+    </div>
+
+    <div class="card">
+        <button class="primary" id="btn-enroll">📸 Create / Reset Face Profile</button>
+        <button id="btn-test">✅ Test Authentication</button>
+        <div style="height: 15px; border-bottom: 1px solid #333; margin: 15px 0;"></div>
+        <button id="btn-install">⚙️ Enable System-Wide Auth</button>
+        <button class="danger" id="btn-uninstall">❌ Disable System-Wide Auth</button>
+    </div>
+
+    <div id="terminal"></div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
