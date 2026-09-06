@@ -280,8 +280,8 @@ def manage_pam(action="install"):
 
 def run_gui():
     try:
-        from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QFrame, QLineEdit
-        from PyQt5.QtGui import QPixmap, QFont
+        from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLineEdit
+        from PyQt5.QtGui import QIcon
         from PyQt5.QtCore import QProcess, Qt
     except ImportError:
         print("Error: PyQt5 is not installed. Run: pip install PyQt5")
@@ -298,6 +298,15 @@ def run_gui():
 
         def initUI(self):
             self.setWindowTitle('Infra Lock Control Panel')
+            
+            logo_path = os.path.join(os.path.dirname(__file__), 'logo.jpg')
+            if getattr(sys, 'frozen', False):
+                logo_path = os.path.join(sys._MEIPASS, 'logo.jpg')
+            elif not os.path.exists(logo_path):
+                logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logo.jpg')
+            if os.path.exists(logo_path):
+                self.setWindowIcon(QIcon(logo_path))
+                
             self.setFixedSize(500, 650)
             self.setStyleSheet("background-color: #121212; color: white;")
             
