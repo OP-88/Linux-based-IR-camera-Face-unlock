@@ -13,6 +13,7 @@ if [ ! -f "dist/infralock" ]; then
 fi
 
 echo "[2/4] Installing system binary..."
+rm -f /usr/local/bin/infralock
 cp dist/infralock /usr/local/bin/infralock
 chmod 755 /usr/local/bin/infralock
 
