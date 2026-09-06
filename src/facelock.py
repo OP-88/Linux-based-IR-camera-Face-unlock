@@ -63,6 +63,11 @@ def scan_face(cap, detector, timeout=5.0):
         if not ret:
             continue
             
+        # Some cameras (or GStreamer backends) return 1-channel grayscale. 
+        # YuNet expects 3-channel BGR.
+        if len(frame.shape) == 2:
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+            
         h, w, _ = frame.shape
         detector.setInputSize((w, h))
         
@@ -80,11 +85,11 @@ def enroll(username, config):
     try:
         if dev_path.startswith('/dev/video'):
             cam_idx = int(dev_path.replace('/dev/video', ''))
-            cap = cv2.VideoCapture(cam_idx)
+            cap = cv2.VideoCapture(cam_idx, cv2.CAP_V4L2)
         else:
-            cap = cv2.VideoCapture(dev_path)
+            cap = cv2.VideoCapture(dev_path, cv2.CAP_V4L2)
     except Exception:
-        cap = cv2.VideoCapture(dev_path)
+        cap = cv2.VideoCapture(dev_path, cv2.CAP_V4L2)
 
     if not cap.isOpened():
         print(f"Error: Could not open {dev_path}")
@@ -152,9 +157,9 @@ def authenticate(username, config, is_pam=False):
     threshold = config.getfloat('security', 'threshold')
     
     if dev_path.startswith('/dev/video'):
-        cap = cv2.VideoCapture(int(dev_path.replace('/dev/video', '')))
+        cap = cv2.VideoCapture(int(dev_path.replace('/dev/video', '')), cv2.CAP_V4L2)
     else:
-        cap = cv2.VideoCapture(dev_path)
+        cap = cv2.VideoCapture(dev_path, cv2.CAP_V4L2)
 
     frame, face = scan_face(cap, detector, timeout=timeout)
     cap.release()
