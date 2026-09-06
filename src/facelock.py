@@ -10,13 +10,19 @@ import time
 import argparse
 import configparser
 import syslog
+import shutil
 from cryptography.fernet import Fernet
 from cryptography.fernet import InvalidToken
 
 # System Paths
 CONFIG_FILE = "/etc/facelock/config.ini"
 VAULT_DIR = "/var/lib/facelock"
-MODELS_DIR = "/usr/share/facelock/models"
+
+def get_models_dir():
+    # If running as a compiled PyInstaller binary, unpack resources from temp folder
+    if getattr(sys, 'frozen', False):
+        return os.path.join(sys._MEIPASS, 'models')
+    return "/usr/share/facelock/models"
 
 def load_config():
     config = configparser.ConfigParser()
@@ -42,11 +48,12 @@ def get_hardware_key():
     return base64.urlsafe_b64encode(key_bytes)
 
 def init_ai_models(input_size):
-    yunet_path = os.path.join(MODELS_DIR, "yunet.onnx")
-    sface_path = os.path.join(MODELS_DIR, "sface.onnx")
+    models_dir = get_models_dir()
+    yunet_path = os.path.join(models_dir, "yunet.onnx")
+    sface_path = os.path.join(models_dir, "sface.onnx")
     
     if not os.path.exists(yunet_path) or not os.path.exists(sface_path):
-        print(f"Error: AI models not found in {MODELS_DIR}. Run install.sh first.")
+        print(f"Error: AI models not found in {models_dir}.")
         sys.exit(1)
         
     detector = cv2.FaceDetectorYN.create(yunet_path, "", input_size)
@@ -99,7 +106,6 @@ def enroll(username, config):
         print(f"Error: Could not open {dev_path}")
         sys.exit(1)
 
-    # Get initial frame to initialize AI with exact dimensions
     ret, frame = cap.read()
     if not ret:
         print("Error: Camera opened but failed to capture a test frame.")
@@ -134,14 +140,20 @@ def enroll(username, config):
     encrypted_blob = cipher.encrypt(payload)
 
     os.makedirs(VAULT_DIR, exist_ok=True)
+    os.chmod(VAULT_DIR, 0o755)
+    
     vault_path = os.path.join(VAULT_DIR, f"{username}.enc")
     
     with open(vault_path, "wb") as f:
         f.write(encrypted_blob)
     
     import pwd
-    user_info = pwd.getpwnam(username)
-    os.chown(vault_path, user_info.pw_uid, user_info.pw_gid)
+    try:
+        user_info = pwd.getpwnam(username)
+        os.chown(vault_path, user_info.pw_uid, user_info.pw_gid)
+    except KeyError:
+        pass
+        
     os.chmod(vault_path, 0o600)
 
     print(f"\nENROLLMENT SUCCESSFUL for {username}!")
@@ -178,7 +190,6 @@ def authenticate(username, config, is_pam=False):
         log_auth("Authentication failed: Camera unavailable.", syslog.LOG_ERR)
         sys.exit(1)
 
-    # Initialize AI sizes dynamically
     ret, frame = cap.read()
     if not ret:
         if not is_pam: print("Error: Failed to read from camera.")
@@ -217,16 +228,93 @@ def authenticate(username, config, is_pam=False):
         log_auth(f"Authentication DENIED for {username}: Face mismatch (Score: {score:.4f})", syslog.LOG_WARNING)
         sys.exit(1)
 
+def manage_pam(action="install"):
+    PAM_LINE = "auth sufficient pam_exec.so stdout seteuid /usr/local/bin/facelock auth-pam\n"
+    targets = [
+        "/etc/pam.d/sudo",
+        "/etc/pam.d/gdm-password",
+        "/etc/pam.d/lightdm",
+        "/etc/pam.d/cinnamon-screensaver",
+        "/etc/pam.d/sddm",
+        "/etc/pam.d/su"
+    ]
+    
+    for target in targets:
+        if not os.path.exists(target):
+            continue
+            
+        with open(target, 'r') as f:
+            lines = f.readlines()
+            
+        if action == "install":
+            if any("facelock" in line for line in lines):
+                print(f"Already installed in {target}")
+                continue
+                
+            print(f"Injecting into {target}...")
+            # Insert after the first comment block, or at the top
+            insert_idx = 0
+            for i, line in enumerate(lines):
+                if line.strip() and not line.startswith('#'):
+                    insert_idx = i
+                    break
+            lines.insert(insert_idx, PAM_LINE)
+            
+        elif action == "uninstall":
+            if not any("facelock" in line for line in lines):
+                continue
+            print(f"Removing from {target}...")
+            lines = [l for l in lines if "facelock" not in l]
+            
+        # Create backup and write
+        shutil.copy(target, f"{target}.bak")
+        with open(target, 'w') as f:
+            f.writelines(lines)
+            
+    print("PAM configuration updated successfully!")
+
+def run_gui():
+    import tkinter as tk
+    from tkinter import messagebox
+    import subprocess
+
+    def run_cmd(cmd_list):
+        # We use pkexec to ask for password if root is needed
+        try:
+            subprocess.run(["pkexec", "/usr/local/bin/facelock"] + cmd_list, check=True)
+            messagebox.showinfo("Success", "Operation completed successfully!")
+        except subprocess.CalledProcessError:
+            messagebox.showerror("Error", "Operation failed or was cancelled.")
+
+    root = tk.Tk()
+    root.title("FaceLock Control Panel")
+    root.geometry("400x300")
+    
+    tk.Label(root, text="🔒 FaceLock Air-Gapped Security", font=("Arial", 14, "bold")).pack(pady=20)
+    
+    tk.Button(root, text="📸 Enroll Face", command=lambda: run_cmd(["enroll"]), height=2, width=30).pack(pady=5)
+    tk.Button(root, text="✅ Test Authentication", command=lambda: subprocess.run(["facelock", "test"]), height=2, width=30).pack(pady=5)
+    tk.Button(root, text="⚙️ Enable System-Wide Auth", command=lambda: run_cmd(["install-pam"]), height=2, width=30).pack(pady=5)
+    tk.Button(root, text="❌ Disable System-Wide Auth", command=lambda: run_cmd(["uninstall-pam"]), height=2, width=30).pack(pady=5)
+    
+    root.mainloop()
+
 def main():
     parser = argparse.ArgumentParser(description="Linux IR Camera Face Unlock")
-    parser.add_argument("command", choices=["enroll", "test", "auth-pam", "config"])
+    parser.add_argument("command", choices=["enroll", "test", "auth-pam", "config", "install-pam", "uninstall-pam", "gui"])
     args = parser.parse_args()
 
     target_user = os.environ.get("PAM_USER", os.environ.get("SUDO_USER", os.environ.get("USER")))
 
-    if os.geteuid() != 0 and args.command in ["enroll", "config"]:
+    if os.geteuid() != 0 and args.command in ["enroll", "config", "install-pam", "uninstall-pam"]:
         print("Error: This command must be run as root (sudo facelock ...)")
         sys.exit(1)
+
+    # Initialize config file gracefully if missing
+    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+    if not os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'w') as f:
+            f.write("[camera]\ndevice_path = /dev/video2\ntimeout = 5.0\n[security]\nthreshold = 0.363\n")
 
     config = load_config()
 
@@ -239,6 +327,12 @@ def main():
         authenticate(target_user, config, is_pam=False)
     elif args.command == "config":
         os.system(f"${{EDITOR:-nano}} {CONFIG_FILE}")
+    elif args.command == "install-pam":
+        manage_pam("install")
+    elif args.command == "uninstall-pam":
+        manage_pam("uninstall")
+    elif args.command == "gui":
+        run_gui()
 
 if __name__ == "__main__":
     main()

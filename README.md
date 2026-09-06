@@ -1,32 +1,43 @@
 # Linux IR Camera Face Unlock
 
-A highly secure, zero-knowledge biometric authentication engine for Linux, utilizing Infrared (IR) cameras.
+A highly secure, zero-knowledge biometric authentication engine for Linux, utilizing Infrared (IR) cameras. 
 
-## Security Model (Zero-Knowledge Vault)
-Instead of storing pictures of your face, this tool extracts a 128-dimensional mathematical representation of your facial geometry using OpenCV's AI models (YuNet & SFace). 
+## Features
+- **Air-Gapped:** Uses bundled AI models. Connects to zero networks.
+- **Standalone:** Packaged into a single Linux executable via PyInstaller.
+- **Zero-Knowledge Security:** Converts facial geometry into a mathematically irreversible 128-d quantized vector.
+- **Hardware Bound:** Encrypts your face vault using a key derived from your motherboard's `/etc/machine-id`.
+- **Automated Injection:** Safely edits Linux PAM configuration files with a single click.
 
-To prevent Model Inversion attacks (reconstructing an image from the data points), the vector is **quantized**.
-Finally, the data is encrypted via AES-256 using a hardware-bound key generated from your `/etc/machine-id`. If someone steals your biometric vault file, it is mathematically irreversible and useless on another machine.
+## Installation
 
-## Setup
+You can run the application immediately without installing Python or dependencies.
 
-1. Run the installer to create the virtual environment and system endpoints:
+1. Clone this repository and compile the app:
 ```bash
-sudo ./install.sh
+git clone https://github.com/OP-88/Linux-based-IR-camera-Face-unlock.git
+cd Linux-based-IR-camera-Face-unlock
+chmod +x build.sh
+./build.sh
 ```
 
-2. Enroll your face (will use `/dev/video2` by default):
+2. Move the compiled binary into your system path:
 ```bash
-sudo facelock enroll
+sudo cp dist/facelock /usr/local/bin/facelock
 ```
 
-3. Test Authentication (Dry-run without locking your system):
+## Usage (GUI)
+
+The application now ships with a fully graphical interface! Just run:
 ```bash
-sudo facelock test
+facelock gui
 ```
+From here you can enroll your face, test the camera, and enable or disable the system-wide lock integration with a single click.
 
-## PAM Integration
-To use this to bypass passwords for `sudo`, add the following line to the top of `/etc/pam.d/sudo`:
-```text
-auth sufficient pam_exec.so stdout seteuid /usr/local/bin/facelock auth-pam
-```
+## Usage (CLI)
+
+If you prefer the terminal:
+- Enroll your face: `sudo facelock enroll`
+- Test your camera: `sudo facelock test`
+- Inject into Linux login/sudo screens: `sudo facelock install-pam`
+- Remove from Linux login/sudo screens: `sudo facelock uninstall-pam`
