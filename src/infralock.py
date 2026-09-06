@@ -379,7 +379,7 @@ def run_gui():
 
         def execute_cmd(self, cmd_args, use_pkexec=False):
             self.set_buttons_enabled(False)
-            self.terminal.clear()
+            self.terminal.append("\n" + "-"*40)
             self.terminal.append(f"> {'pkexec ' if use_pkexec else ''}infralock {' '.join(cmd_args)}")
             
             program = "pkexec" if use_pkexec else "/usr/local/bin/infralock"
