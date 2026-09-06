@@ -280,7 +280,7 @@ def manage_pam(action="install"):
 
 def run_gui():
     try:
-        from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QFrame
+        from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QFrame, QLineEdit
         from PyQt5.QtGui import QPixmap, QFont
         from PyQt5.QtCore import QProcess, Qt
     except ImportError:
@@ -326,6 +326,12 @@ def run_gui():
             self.terminal.setStyleSheet("background-color: #000000; color: #00ff00; font-family: monospace; padding: 10px; border-radius: 5px;")
             layout.addWidget(self.terminal)
             
+            self.terminal_input = QLineEdit()
+            self.terminal_input.setPlaceholderText("Type a command (e.g., test, enroll, help) and press Enter...")
+            self.terminal_input.setStyleSheet("background-color: #111111; color: #00ff00; font-family: monospace; padding: 10px; border: 1px solid #333; border-radius: 5px;")
+            self.terminal_input.returnPressed.connect(self.handle_terminal_input)
+            layout.addWidget(self.terminal_input)
+            
             self.setLayout(layout)
 
         def create_button(self, text, color, callback):
@@ -339,6 +345,7 @@ def run_gui():
             self.btn_test.setEnabled(enabled)
             self.btn_install.setEnabled(enabled)
             self.btn_uninstall.setEnabled(enabled)
+            self.terminal_input.setEnabled(enabled)
 
         def execute_cmd(self, cmd_args, use_pkexec=False):
             self.set_buttons_enabled(False)
@@ -366,6 +373,29 @@ def run_gui():
         def process_finished(self):
             self.terminal.append("\n[Process Finished]")
             self.set_buttons_enabled(True)
+            self.terminal_input.setEnabled(True)
+
+        def handle_terminal_input(self):
+            raw_text = self.terminal_input.text().strip()
+            self.terminal_input.clear()
+            if not raw_text: return
+            
+            self.terminal.append(f"\n[sandbox@infralock]~# {raw_text}")
+            cmd = raw_text.lower().split()
+            base = cmd[0]
+            
+            if base == "clear":
+                self.terminal.clear()
+            elif base == "help":
+                self.terminal.append("Containerized Commands:\n  enroll        : Recreate face profile\n  test          : Test authentication\n  config        : Edit security configuration\n  install-pam   : Enable system-wide lock\n  uninstall-pam : Disable system-wide lock\n  clear         : Clear this terminal")
+            elif base == "enroll": self.run_enroll()
+            elif base == "test": self.run_test()
+            elif base == "config": self.execute_cmd(["config"], True)
+            elif base == "install-pam": self.run_install()
+            elif base == "uninstall-pam": self.run_uninstall()
+            else:
+                self.terminal.append(f"🔒 Access Denied: '{raw_text}' is not a recognized Infra Lock command. This terminal is securely isolated. Type 'help'.")
+
 
     app = QApplication(sys.argv)
     gui = InfraLockGUI()
