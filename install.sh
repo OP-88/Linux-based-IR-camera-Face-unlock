@@ -7,10 +7,8 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "[1/4] Compiling Infra Lock..."
-if [ ! -f "dist/infralock" ]; then
-    # We drop privileges to build so it doesn't mess up user permissions in the repo
-    sudo -u $SUDO_USER bash ./build.sh
-fi
+# Always rebuild the binary from the latest source code
+sudo -u $SUDO_USER bash ./build.sh
 
 echo "[2/4] Installing system binary..."
 rm -f /usr/local/bin/infralock
