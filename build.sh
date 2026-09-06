@@ -9,15 +9,17 @@ fi
 source venv/bin/activate
 
 echo "Installing build dependencies..."
-pip install pyinstaller opencv-python-headless numpy cryptography
+pip install pyinstaller opencv-python-headless numpy cryptography PyQt5
 
 echo "Compiling Infra Lock into a standalone binary..."
 pyinstaller --onefile --name infralock \
     --add-data "models/yunet.onnx:models" \
     --add-data "models/sface.onnx:models" \
+    --add-data "logo.jpg:." \
     --hidden-import="cv2" \
     --hidden-import="numpy" \
     --hidden-import="cryptography" \
+    --hidden-import="PyQt5" \
     src/infralock.py
 
 echo "Build complete! Your standalone air-gapped binary is located at:"

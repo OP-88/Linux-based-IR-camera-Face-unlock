@@ -279,30 +279,123 @@ def manage_pam(action="install"):
     print("PAM configuration updated successfully!")
 
 def run_gui():
-    import tkinter as tk
-    from tkinter import messagebox
-    import subprocess
+    try:
+        from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QFrame
+        from PyQt5.QtGui import QPixmap, QFont
+        from PyQt5.QtCore import QProcess, Qt
+    except ImportError:
+        print("Error: PyQt5 is not installed. Run: pip install PyQt5")
+        sys.exit(1)
 
-    def run_cmd(cmd_list):
-        # We use pkexec to ask for password if root is needed
-        try:
-            subprocess.run(["pkexec", "/usr/local/bin/infralock"] + cmd_list, check=True)
-            messagebox.showinfo("Success", "Operation completed successfully!")
-        except subprocess.CalledProcessError:
-            messagebox.showerror("Error", "Operation failed or was cancelled.")
+    class InfraLockGUI(QWidget):
+        def __init__(self):
+            super().__init__()
+            self.initUI()
+            self.process = QProcess(self)
+            self.process.readyReadStandardOutput.connect(self.handle_stdout)
+            self.process.readyReadStandardError.connect(self.handle_stderr)
+            self.process.finished.connect(self.process_finished)
 
-    root = tk.Tk()
-    root.title("Infra Lock Control Panel")
-    root.geometry("400x300")
-    
-    tk.Label(root, text="🔒 Infra Lock Air-Gapped Security", font=("Arial", 14, "bold")).pack(pady=20)
-    
-    tk.Button(root, text="📸 Enroll Face", command=lambda: run_cmd(["enroll"]), height=2, width=30).pack(pady=5)
-    tk.Button(root, text="✅ Test Authentication", command=lambda: subprocess.run(["infralock", "test"]), height=2, width=30).pack(pady=5)
-    tk.Button(root, text="⚙️ Enable System-Wide Auth", command=lambda: run_cmd(["install-pam"]), height=2, width=30).pack(pady=5)
-    tk.Button(root, text="❌ Disable System-Wide Auth", command=lambda: run_cmd(["uninstall-pam"]), height=2, width=30).pack(pady=5)
-    
-    root.mainloop()
+        def initUI(self):
+            self.setWindowTitle('Infra Lock Control Panel')
+            self.setFixedSize(500, 650)
+            self.setStyleSheet("background-color: #121212; color: white;")
+            
+            layout = QVBoxLayout()
+            
+            # Logo
+            self.logo_label = QLabel(self)
+            logo_path = os.path.join(os.path.dirname(__file__), 'logo.jpg')
+            if getattr(sys, 'frozen', False):
+                logo_path = os.path.join(sys._MEIPASS, 'logo.jpg')
+            elif not os.path.exists(logo_path):
+                # Fallback if run from source dir
+                logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logo.jpg')
+            
+            if os.path.exists(logo_path):
+                pixmap = QPixmap(logo_path).scaled(150, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                self.logo_label.setPixmap(pixmap)
+            self.logo_label.setAlignment(Qt.AlignCenter)
+            layout.addWidget(self.logo_label)
+            
+            title = QLabel("INFRA LOCK")
+            title.setFont(QFont("Arial", 24, QFont.Bold))
+            title.setAlignment(Qt.AlignCenter)
+            layout.addWidget(title)
+            
+            subtitle = QLabel("Zero-Knowledge Biometric Engine")
+            subtitle.setStyleSheet("color: #aaaaaa;")
+            subtitle.setAlignment(Qt.AlignCenter)
+            layout.addWidget(subtitle)
+            
+            layout.addSpacing(20)
+            
+            self.btn_enroll = self.create_button("📸 Create / Reset Face Profile", "#2e7d32", self.run_enroll)
+            layout.addWidget(self.btn_enroll)
+            
+            self.btn_test = self.create_button("✅ Test Authentication", "#2c2c2c", self.run_test)
+            layout.addWidget(self.btn_test)
+            
+            layout.addSpacing(10)
+            
+            self.btn_install = self.create_button("⚙️ Enable System-Wide Auth", "#2c2c2c", self.run_install)
+            layout.addWidget(self.btn_install)
+            
+            self.btn_uninstall = self.create_button("❌ Disable System-Wide Auth", "#c62828", self.run_uninstall)
+            layout.addWidget(self.btn_uninstall)
+            
+            layout.addSpacing(20)
+            
+            self.terminal = QTextEdit()
+            self.terminal.setReadOnly(True)
+            self.terminal.setStyleSheet("background-color: #000000; color: #00ff00; font-family: monospace; padding: 10px; border-radius: 5px;")
+            layout.addWidget(self.terminal)
+            
+            self.setLayout(layout)
+
+        def create_button(self, text, color, callback):
+            btn = QPushButton(text)
+            btn.setStyleSheet(f"QPushButton {{ background-color: {color}; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: bold; border: 1px solid #444; }} QPushButton:hover {{ background-color: #3c3c3c; }}")
+            btn.clicked.connect(callback)
+            return btn
+            
+        def set_buttons_enabled(self, enabled):
+            self.btn_enroll.setEnabled(enabled)
+            self.btn_test.setEnabled(enabled)
+            self.btn_install.setEnabled(enabled)
+            self.btn_uninstall.setEnabled(enabled)
+
+        def execute_cmd(self, cmd_args, use_pkexec=False):
+            self.set_buttons_enabled(False)
+            self.terminal.clear()
+            self.terminal.append(f"> {'pkexec ' if use_pkexec else ''}infralock {' '.join(cmd_args)}")
+            
+            program = "pkexec" if use_pkexec else "/usr/local/bin/infralock"
+            args = ["/usr/local/bin/infralock"] + cmd_args if use_pkexec else cmd_args
+            
+            self.process.start(program, args)
+
+        def run_enroll(self): self.execute_cmd(["enroll"], True)
+        def run_test(self): self.execute_cmd(["test"], False)
+        def run_install(self): self.execute_cmd(["install-pam"], True)
+        def run_uninstall(self): self.execute_cmd(["uninstall-pam"], True)
+
+        def handle_stdout(self):
+            data = self.process.readAllStandardOutput().data().decode()
+            self.terminal.append(data.strip())
+            
+        def handle_stderr(self):
+            data = self.process.readAllStandardError().data().decode()
+            self.terminal.append(data.strip())
+            
+        def process_finished(self):
+            self.terminal.append("\n[Process Finished]")
+            self.set_buttons_enabled(True)
+
+    app = QApplication(sys.argv)
+    gui = InfraLockGUI()
+    gui.show()
+    sys.exit(app.exec_())
 
 def main():
     parser = argparse.ArgumentParser(description="Linux IR Camera Face Unlock")
