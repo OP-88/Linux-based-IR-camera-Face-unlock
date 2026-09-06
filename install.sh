@@ -28,6 +28,7 @@ cp src/facelock.py /opt/facelock/facelock.py
 chmod +x /opt/facelock/facelock.py
 
 echo "Creating executable wrapper..."
+rm -f /usr/local/bin/facelock
 cat << 'EOF' > /usr/local/bin/facelock
 #!/bin/bash
 exec /opt/facelock/venv/bin/python /opt/facelock/facelock.py "$@"
