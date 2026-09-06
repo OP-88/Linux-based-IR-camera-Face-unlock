@@ -20,7 +20,6 @@ MODELS_DIR = "/usr/share/facelock/models"
 
 def load_config():
     config = configparser.ConfigParser()
-    # Defaults
     config.read_dict({
         'camera': {'device_path': '/dev/video2', 'timeout': '5.0'},
         'security': {'threshold': '0.363'}
@@ -29,7 +28,6 @@ def load_config():
     return config
 
 def log_auth(message, level=syslog.LOG_INFO):
-    """Log to /var/log/auth.log"""
     syslog.openlog(ident="facelock", facility=syslog.LOG_AUTH)
     syslog.syslog(level, message)
     syslog.closelog()
@@ -43,7 +41,7 @@ def get_hardware_key():
     key_bytes = hashlib.sha256(machine_id.encode()).digest()
     return base64.urlsafe_b64encode(key_bytes)
 
-def init_ai_models():
+def init_ai_models(input_size):
     yunet_path = os.path.join(MODELS_DIR, "yunet.onnx")
     sface_path = os.path.join(MODELS_DIR, "sface.onnx")
     
@@ -51,9 +49,19 @@ def init_ai_models():
         print(f"Error: AI models not found in {MODELS_DIR}. Run install.sh first.")
         sys.exit(1)
         
-    detector = cv2.FaceDetectorYN.create(yunet_path, "", (320, 320))
+    detector = cv2.FaceDetectorYN.create(yunet_path, "", input_size)
     recognizer = cv2.FaceRecognizerSF.create(sface_path, "")
     return detector, recognizer
+
+def open_camera(dev_path):
+    try:
+        if dev_path.startswith('/dev/video'):
+            cam_idx = int(dev_path.replace('/dev/video', ''))
+            return cv2.VideoCapture(cam_idx, cv2.CAP_V4L2)
+        else:
+            return cv2.VideoCapture(dev_path, cv2.CAP_V4L2)
+    except Exception:
+        return cv2.VideoCapture(dev_path, cv2.CAP_V4L2)
 
 def scan_face(cap, detector, timeout=5.0):
     start_time = time.time()
@@ -63,24 +71,18 @@ def scan_face(cap, detector, timeout=5.0):
         if not ret:
             continue
             
-        # Some cameras (or GStreamer backends) return 1-channel grayscale. 
-        # YuNet expects 3-channel BGR.
         if len(frame.shape) == 2:
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
             
         h, w, _ = frame.shape
-        
-        # YuNet crashes if dimensions aren't multiples of 32 (tensor mismatch)
         new_h = int(np.ceil(h / 32.0) * 32)
         new_w = int(np.ceil(w / 32.0) * 32)
         
         if new_h != h or new_w != w:
             pad_frame = np.zeros((new_h, new_w, 3), dtype=np.uint8)
             pad_frame[:h, :w, :] = frame
-            detector.setInputSize((new_w, new_h))
             ret, faces = detector.detect(pad_frame)
         else:
-            detector.setInputSize((w, h))
             ret, faces = detector.detect(frame)
             
         if faces is not None and len(faces) > 0:
@@ -90,21 +92,23 @@ def scan_face(cap, detector, timeout=5.0):
 
 def enroll(username, config):
     print(f"Enrolling face for user: {username}")
-    detector, recognizer = init_ai_models()
-    
     dev_path = config.get('camera', 'device_path')
-    try:
-        if dev_path.startswith('/dev/video'):
-            cam_idx = int(dev_path.replace('/dev/video', ''))
-            cap = cv2.VideoCapture(cam_idx, cv2.CAP_V4L2)
-        else:
-            cap = cv2.VideoCapture(dev_path, cv2.CAP_V4L2)
-    except Exception:
-        cap = cv2.VideoCapture(dev_path, cv2.CAP_V4L2)
+    cap = open_camera(dev_path)
 
     if not cap.isOpened():
         print(f"Error: Could not open {dev_path}")
         sys.exit(1)
+
+    # Get initial frame to initialize AI with exact dimensions
+    ret, frame = cap.read()
+    if not ret:
+        print("Error: Camera opened but failed to capture a test frame.")
+        sys.exit(1)
+        
+    h, w = frame.shape[:2]
+    new_h = int(np.ceil(h / 32.0) * 32)
+    new_w = int(np.ceil(w / 32.0) * 32)
+    detector, recognizer = init_ai_models((new_w, new_h))
 
     print("\nGet ready! Look directly at the camera...")
     for i in range(3, 0, -1):
@@ -160,18 +164,28 @@ def authenticate(username, config, is_pam=False):
         log_auth(msg, syslog.LOG_CRIT)
         sys.exit(1)
 
-    if not is_pam: print("Scanning face... (Looking for you...)")
-    detector, recognizer = init_ai_models()
-    
     dev_path = config.get('camera', 'device_path')
     timeout = config.getfloat('camera', 'timeout')
     threshold = config.getfloat('security', 'threshold')
     
-    if dev_path.startswith('/dev/video'):
-        cap = cv2.VideoCapture(int(dev_path.replace('/dev/video', '')), cv2.CAP_V4L2)
-    else:
-        cap = cv2.VideoCapture(dev_path, cv2.CAP_V4L2)
+    cap = open_camera(dev_path)
+    if not cap.isOpened():
+        if not is_pam: print("Error: Could not open camera.")
+        log_auth("Authentication failed: Camera unavailable.", syslog.LOG_ERR)
+        sys.exit(1)
 
+    # Initialize AI sizes dynamically
+    ret, frame = cap.read()
+    if not ret:
+        if not is_pam: print("Error: Failed to read from camera.")
+        sys.exit(1)
+        
+    h, w = frame.shape[:2]
+    new_h = int(np.ceil(h / 32.0) * 32)
+    new_w = int(np.ceil(w / 32.0) * 32)
+    detector, recognizer = init_ai_models((new_w, new_h))
+
+    if not is_pam: print("Scanning face... (Looking for you...)")
     frame, face = scan_face(cap, detector, timeout=timeout)
     cap.release()
 
