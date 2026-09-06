@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo.jpg" alt="Infra Lock Logo" width="300"/>
+  <img src="logo.png" alt="Infra Lock Logo" width="300"/>
   <h1>Infra Lock</h1>
 </div>
 

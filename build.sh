@@ -15,7 +15,7 @@ echo "Compiling Infra Lock into a standalone binary..."
 pyinstaller --onefile --name infralock \
     --add-data "models/yunet.onnx:models" \
     --add-data "models/sface.onnx:models" \
-    --add-data "logo.jpg:." \
+    --add-data "logo.png:." \
     --hidden-import="cv2" \
     --hidden-import="numpy" \
     --hidden-import="cryptography" \

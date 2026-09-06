@@ -299,11 +299,11 @@ def run_gui():
         def initUI(self):
             self.setWindowTitle('Infra Lock Control Panel')
             
-            logo_path = os.path.join(os.path.dirname(__file__), 'logo.jpg')
+            logo_path = os.path.join(os.path.dirname(__file__), 'logo.png')
             if getattr(sys, 'frozen', False):
-                logo_path = os.path.join(sys._MEIPASS, 'logo.jpg')
+                logo_path = os.path.join(sys._MEIPASS, 'logo.png')
             elif not os.path.exists(logo_path):
-                logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logo.jpg')
+                logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logo.png')
             if os.path.exists(logo_path):
                 self.setWindowIcon(QIcon(logo_path))
                 
